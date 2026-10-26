@@ -1,0 +1,32 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'com.p308.schedule'
+    compileSdk 34
+    signingConfigs {
+        debug {
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+    defaultConfig {
+        applicationId "com.p308.schedule"
+        minSdk 24
+        targetSdk 34
+        versionCode Integer.parseInt((project.findProperty("appCode") ?: "1").toString())
+        versionName (project.findProperty("appVersion") ?: "1.0").toString()
+    }
+    buildTypes {
+        debug {
+            debuggable false
+            signingConfig signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

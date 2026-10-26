@@ -1,0 +1,63 @@
+name: Build APK & Deploy Web
+on:
+  push:
+    branches: ['main', 'master']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inject GitHub repository & sync web index.html
+        run: |
+          sed -i "s|__GITHUB_REPO__|${GITHUB_REPOSITORY}|g" app/src/main/java/com/p308/schedule/MainActivity.java
+          cp app/src/main/assets/index.html index.html
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Determine version
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            VNAME="${TAG#v}"
+          else
+            TAG="v1.0"
+            VNAME="1.0"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "vname=${VNAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon -PappVersion="${{ steps.ver.outputs.vname }}" -PappCode="${{ github.run_number }}"
+
+      - name: Collect APK
+        run: |
+          APK=$(find app/build/outputs -name "*.apk" | head -n 1)
+          echo "Found APK: $APK"
+          cp "$APK" P308.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: P308-apk
+          path: P308.apk
+
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Расписание П-308 (${{ steps.ver.outputs.tag }})
+          files: P308.apk
